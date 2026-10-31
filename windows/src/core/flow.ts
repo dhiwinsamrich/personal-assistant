@@ -21,7 +21,7 @@ async function callOrThrow<T>(cmd: string, args?: Record<string, unknown>): Prom
 }
 
 export type FlowKey = "right_ctrl" | "right_alt" | "right_shift" | "left_ctrl_super";
-export type Edge = "bottom" | "left" | "right";
+export type Edge = "bottom" | "bottom-left" | "bottom-right" | "left" | "right";
 export type Style = "verbatim" | "natural" | "polished";
 
 export interface FlowPrefs {
@@ -184,6 +184,8 @@ export type VoiceOutput = "system" | "elevenlabs" | "off";
 
 export const FlowBridge = {
   status: () => call<FlowStatus>("flow_status"),
+  /** The Coucou window is on screen (shown, not minimised); `hub-visible` tells when it changes. */
+  hubShown: () => call<boolean>("hub_shown"),
   setPrefs: (prefs: FlowPrefs) => call<void>("flow_set_prefs", { prefs }),
   history: () => call<FlowEntry[]>("flow_history"),
   deleteEntry: (id: string) => call<void>("flow_delete", { id }),
