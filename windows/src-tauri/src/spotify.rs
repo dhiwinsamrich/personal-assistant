@@ -487,7 +487,7 @@ pub async fn spotify_refresh(app: AppHandle) -> Option<PlayerState> {
     }
     #[cfg(windows)]
     {
-        tauri::async_runtime::spawn_blocking(move || win::refresh(&app)).await.ok().flatten()
+        tauri::async_runtime::spawn_blocking(move || win::refresh(&app, Source::Spotify)).await.ok().flatten()
     }
     #[cfg(not(any(target_os = "linux", windows)))]
     {
@@ -506,7 +506,7 @@ pub async fn spotify_control(app: AppHandle, action: String, value: Option<f64>)
     }
     #[cfg(windows)]
     {
-        tauri::async_runtime::spawn_blocking(move || win::control(&app, &action, value)).await.unwrap_or(false)
+        tauri::async_runtime::spawn_blocking(move || win::control(&app, Source::Spotify, &action, value)).await.unwrap_or(false)
     }
     #[cfg(not(any(target_os = "linux", windows)))]
     {
