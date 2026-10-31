@@ -378,24 +378,6 @@ The macOS app is native Swift 6 / SwiftUI / AppKit with **zero third-party depen
 - A native Kotlin and Jetpack Compose app; Mochi is drawn in code, ported from the Windows app, with his outfits and sounds.
 - The phone link (`windows/src-tauri/src/phone_link`) is an opt-in server in the Windows and Linux app, on your local network only: TLS with a certificate pinned at pairing, a pairing code that "Pair again" replaces (and disconnects every phone), and approvals bound to the exact request the computer is waiting on. The protocol is in [`docs/ANDROID_LINK.md`](docs/ANDROID_LINK.md).
 
-## Contributing
-
-Issues and PRs are very welcome — new integrations, new emotes, new sounds, bug fixes. See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-Want to add or improve a translation? Open a PR with changes to `NotchBuddy/Resources/Localizable.xcstrings`.
-
-## Credits
-
-Built by [Louis Raillé](https://louisraille.fr) with Claude Code.
-Coucou for Android and the phone link by [Rhytam Biswas (@Rhytam23)](https://github.com/Rhytam23).
-Thanks to everyone who sent a pull request — see [contributors](https://github.com/Louis-CFM/coucou/graphs/contributors).
-Inspired by the notch-companion concepts shared by design studios — this project is independent and not affiliated with any of them.
-
-## License
-
-- **Code:** [MIT](LICENSE) — use it, fork it, learn from it, just keep the copyright notice. The Android app and the phone link are © Rhytam Biswas, also under MIT ([android/LICENSE](android/LICENSE)).
-- **Name, Mochi character, icon, sounds and media:** © Louis Raillé, all rights reserved — see [LICENSE-ASSETS.md](LICENSE-ASSETS.md). Shipping your own fork? Give it your own name and character.
-
 <div align="center">
 
 **If Mochi made you smile, a ⭐ helps a lot.**
