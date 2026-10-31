@@ -24,7 +24,9 @@ struct SyncedLyrics: Equatable, Sendable {
                 rest = rest[rest.index(after: close)...]
             }
             guard !times.isEmpty else { continue }
-            let text = rest.trimmingCharacters(in: .whitespaces)
+            var text = rest.trimmingCharacters(in: .whitespaces)
+            // LRCLIB marks instrumental parts with a lone "♪": a break, like an empty line
+            if text.allSatisfy({ "♪♫♬ ".contains($0) }) { text = "" }
             parsed += times.map { Line(time: $0, text: text) }
         }
         guard !parsed.isEmpty else { return nil }

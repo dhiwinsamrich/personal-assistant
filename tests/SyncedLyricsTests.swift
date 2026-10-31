@@ -41,6 +41,10 @@ enum SyncedLyricsTests {
         // Windows line endings
         precondition(SyncedLyrics(lrc: "[00:01.00] A\r\n[00:02.00] B")?.line(at: 2.5) == "B")
 
-        print("Synced lyrics: 18 cases passed")
+        // A lone music note is an instrumental break
+        precondition(SyncedLyrics(lrc: "[00:01.00] A\n[00:02.00] ♪\n[00:03.00] ♪ B")?.line(at: 2.5) == nil)
+        precondition(SyncedLyrics(lrc: "[00:01.00] A\n[00:02.00] ♪\n[00:03.00] ♪ B")?.line(at: 3.5) == "♪ B")
+
+        print("Synced lyrics: 20 cases passed")
     }
 }
