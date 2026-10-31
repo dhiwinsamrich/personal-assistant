@@ -1491,8 +1491,10 @@ pub fn windows_track(title: &str, artist: &str, album: &str, duration: f64, spot
     }
     Some(Track {
         id: format!("{scheme}:{kind}:{hash:016x}"),
-        title: short_title(title),
-        artist: short_artist(artist),
+        // Spotify's "Song - Remastered 2011" is cut like the Mac; another app's title is
+        // kept whole ("Coldplay - Hymn For The Weekend (Lyrics)" would lose the song).
+        title: if spotify { short_title(title) } else { title.to_string() },
+        artist: if spotify { short_artist(artist) } else { artist.to_string() },
         album: album.to_string(),
         duration: duration.max(0.0),
         // Not a URL: the thumbnail is read from the session itself. The page
@@ -1627,8 +1629,11 @@ mod win {
 
     /// What wakes the listener.
     enum Wake {
-        /// The session's track, status or timeline moved.
+        /// The session's status or timeline moved.
         Changed,
+        /// Its track or cover changed: a browser publishes the title first and
+        /// the thumbnail a moment later.
+        Media,
         /// A player appeared or went away (or, for Now Playing, Windows changed
         /// its current one): find the session again.
         Sessions,
@@ -1775,6 +1780,7 @@ mod win {
 
         let mut bound: Option<Bound> = None;
         let mut rebind = true;
+        let mut media = true;
         while current(source, generation) {
             // Spotify's session only changes when players come and go; Now Playing
             // looks again on every event (one app may pause while another plays).
@@ -1791,21 +1797,25 @@ mod win {
                     }
                     shared(source).followed = next.as_ref().and_then(session_id);
                     bound = next.and_then(|s| Bound::bind(s, &tx));
+                    media = true;
                 }
                 rebind = false;
             }
-            read_and_emit(&app, source, generation, bound.as_ref().map(|b| &b.session));
+            read_and_emit(&app, source, generation, bound.as_ref().map(|b| &b.session), media);
+            media = false;
 
             // Events come in bursts (a new track moves everything): one read each.
             let mut stop = false;
             match rx.recv() {
                 Ok(Wake::Changed) => {}
+                Ok(Wake::Media) => media = true,
                 Ok(Wake::Sessions) => rebind = true,
                 Ok(Wake::Stop) | Err(_) => stop = true,
             }
             while let Ok(more) = rx.try_recv() {
                 match more {
                     Wake::Changed => {}
+                    Wake::Media => media = true,
                     Wake::Sessions => rebind = true,
                     Wake::Stop => stop = true,
                 }
@@ -1835,9 +1845,9 @@ mod win {
     impl Bound {
         fn bind(session: Session, tx: &Sender<Wake>) -> Option<Bound> {
             let tokens = [
-                session.MediaPropertiesChanged(&wake_on(tx)).ok(),
-                session.PlaybackInfoChanged(&wake_on(tx)).ok(),
-                session.TimelinePropertiesChanged(&wake_on(tx)).ok(),
+                session.MediaPropertiesChanged(&wake_on(tx, || Wake::Media)).ok(),
+                session.PlaybackInfoChanged(&wake_on(tx, || Wake::Changed)).ok(),
+                session.TimelinePropertiesChanged(&wake_on(tx, || Wake::Changed)).ok(),
             ];
             Some(Bound { session, tokens })
         }
@@ -1857,10 +1867,13 @@ mod win {
     }
 
     /// A handler that wakes the listener, for any of the session's events.
-    fn wake_on<A: windows::core::RuntimeType + 'static>(tx: &Sender<Wake>) -> TypedEventHandler<Session, A> {
+    fn wake_on<A: windows::core::RuntimeType + 'static>(
+        tx: &Sender<Wake>,
+        wake: fn() -> Wake,
+    ) -> TypedEventHandler<Session, A> {
         let tx = tx.clone();
         TypedEventHandler::new(move |_, _| {
-            let _ = tx.send(Wake::Changed);
+            let _ = tx.send(wake());
             Ok(())
         })
     }
@@ -1973,7 +1986,9 @@ mod win {
         Ok((snapshot, props))
     }
 
-    fn read_and_emit(app: &AppHandle, source: Source, generation: u64, session: Option<&Session>) {
+    /// `media`: the track or its cover just changed, so Now Playing reads the cover
+    /// again rather than keep the one it saw first.
+    fn read_and_emit(app: &AppHandle, source: Source, generation: u64, session: Option<&Session>, media: bool) {
         let read = session.and_then(|s| snapshot(s, source).ok());
         let volume = match source {
             Source::Spotify => read.as_ref().and_then(|_| spotify_volume()),
@@ -2023,7 +2038,7 @@ mod win {
         };
         emit(app, source, &state);
         if let (Some(props), Some(track)) = (props, state.track.as_ref()) {
-            artwork(app, source, track, &props);
+            artwork(app, source, track, &props, media && source == Source::Any);
         }
     }
 
@@ -2031,10 +2046,15 @@ mod win {
 
     /// The track's cover, as a data URL (the page may not load anything
     /// remote). Read once per track; Spotify sometimes adds the thumbnail a
-    /// moment after the title, and the next event brings it then.
-    fn artwork(app: &AppHandle, source: Source, track: &Track, props: &MediaProperties) {
+    /// moment after the title, and the next event brings it then. `fresh`
+    /// reads it again: a browser shows its own icon until the page's artwork
+    /// has loaded.
+    fn artwork(app: &AppHandle, source: Source, track: &Track, props: &MediaProperties, fresh: bool) {
         use tauri::Emitter;
         let Some(key) = track.art_url.clone() else { return };
+        if fresh {
+            ART.lock().unwrap().retain(|(k, _)| *k != key);
+        }
         let cached = ART.lock().unwrap().iter().find(|(k, _)| *k == key).map(|(_, d)| d.clone());
         let data = match cached {
             Some(data) => data,
@@ -2135,7 +2155,7 @@ mod win {
         com();
         let manager = Manager::RequestAsync().and_then(|op| op.get()).ok();
         let session = manager.as_ref().and_then(|m| followed_session(m, source));
-        read_and_emit(app, source, generation, session.as_ref());
+        read_and_emit(app, source, generation, session.as_ref(), true);
         let s = shared(source);
         (s.active && s.generation == generation).then(|| s.state.clone())
     }
@@ -2478,6 +2498,10 @@ mod tests {
         assert!(video.id.starts_with("media:track:"));
         assert_eq!(video.title, "Lo-fi beats to study to");
         assert!(windows_track("Song", "Artist", "Album", 200.0, false).unwrap().id.starts_with("media:track:"));
+        // Spotify's cuts are Spotify's: a video's title is kept whole.
+        let yt = windows_track("Coldplay - Hymn For The Weekend (Lyrics)", "DopeMusic", "", 236.0, false).unwrap();
+        assert_eq!(yt.title, "Coldplay - Hymn For The Weekend (Lyrics)");
+        assert_eq!(windows_track("Song", "A feat. B", "", 1.0, false).unwrap().artist, "A feat. B");
         assert_eq!(windows_track(" ", "Artist", "", 1.0, false), None);
     }
 
