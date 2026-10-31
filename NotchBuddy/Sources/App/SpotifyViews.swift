@@ -84,6 +84,7 @@ struct SpotifyPill: View {
 
 struct SpotifyCardView: View {
     @ObservedObject private var controller = SpotifyController.shared
+    @ObservedObject private var lyricsStore = SpotifyLyrics.shared
 
     private let green = Color(hex: SpotifyController.green)
 
@@ -123,7 +124,19 @@ struct SpotifyCardView: View {
                             .foregroundColor(Color(hex: "#F5F6F8"))
                             .lineLimit(1).truncationMode(.tail)
                     }
-                    if !subtitle.isEmpty {
+                    if let lyrics = lyricsStore.lyrics {
+                        // The line being sung replaces artist · album; between lines they come back
+                        TimelineView(.animation(minimumInterval: 0.25, paused: !controller.isPlaying)) { context in
+                            let line = lyrics.line(at: controller.position(at: context.date))
+                            Text(line ?? subtitle)
+                                .font(.system(size: 11))
+                                .foregroundColor(Color(hex: line == nil ? "#8E939C" : "#C5C8CD"))
+                                .lineLimit(1).truncationMode(.tail)
+                                .contentTransition(.opacity)
+                                .animation(.easeOut(duration: 0.2), value: line)
+                                .help(line ?? "")
+                        }
+                    } else if !subtitle.isEmpty {
                         Text(subtitle)
                             .font(.system(size: 11))
                             .foregroundColor(Color(hex: "#8E939C"))

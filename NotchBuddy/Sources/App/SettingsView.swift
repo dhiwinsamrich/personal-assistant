@@ -113,6 +113,9 @@ struct SettingsView: View {
     @AppStorage(CryptoSettings.coinsKey)        private var cryptoCoins = CryptoSettings.defaultCoins
     @AppStorage(CryptoSettings.alertKey)        private var cryptoAlert = false
     @AppStorage(CryptoSettings.alertPercentKey) private var cryptoAlertPercent = 5.0
+    #if !APPSTORE
+    @AppStorage(SpotifyLyrics.enabledKey)       private var spotifyLyricsEnabled = false
+    #endif
 
     // Hotkey
     @State private var hotkeyFlags: UInt    = AppState.shared.hotkeyFlags
@@ -1456,6 +1459,21 @@ struct SettingsView: View {
                     SecureField("Integration token  (secret_…)", text: $notionKey)
                         .textFieldStyle(.roundedBorder)
                 }
+
+                #if !APPSTORE
+                // Spotify: synced lyrics from LRCLIB, off until turned on here. Applies at once.
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 6) {
+                        Circle().fill(Color(hex: SpotifyController.green)).frame(width: 8, height: 8)
+                        Text(verbatim: "Spotify").font(.system(size: 12, weight: .semibold))
+                    }
+                    Toggle("Show synced lyrics on the Spotify card", isOn: $spotifyLyricsEnabled)
+                    Text("Looks up the playing song on LRCLIB (lrclib.net), a free lyrics database. Only its title, artist, album and length are sent.")
+                        .font(.system(size: 10))
+                        .foregroundColor(Color(hex: "#8E939C"))
+                }
+                .onChange(of: spotifyLyricsEnabled) { _, _ in SpotifyLyrics.shared.settingsChanged() }
+                #endif
 
                 // Crypto: public prices, no key. Changes apply at once.
                 VStack(alignment: .leading, spacing: 5) {
