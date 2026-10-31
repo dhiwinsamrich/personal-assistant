@@ -888,6 +888,9 @@ const INTEGRATIONS: IntegrationDef[] = [
     fields: [{ key: "calcom-api-key", label: N_("API key"), placeholder: "cal_…", secret: true }] },
   // Nothing to enter: Spotify is read from the OS (src-tauri/src/spotify.rs).
   { id: "integration_spotify", name: "Spotify", color: "#1DB954", fields: [] },
+  // Nothing to enter: the timer runs in the island.
+  { id: "integration_focus", name: "Focus timer", color: "#FB7185", fields: [],
+    hint: N_("A focus timer in the island: 25 minutes of focus, then a 5-minute break (15 after every fourth round). Mochi naps on breaks.") },
   // Nothing to enter either: any app in the Windows media controls.
   { id: "integration_nowplaying", name: "Now Playing", color: "#22D3EE", fields: [],
     hint: N_("Music and videos from any app in the Windows media controls, such as YouTube in your browser or Apple Music.") },
