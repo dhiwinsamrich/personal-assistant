@@ -12,6 +12,7 @@ import { registerShortcutHandlers } from "./island/shortcuts";
 import { registerVoiceHandlers } from "./island/voice";
 import { applySpotify, registerSpotifyHandlers } from "./island/spotify";
 import { registerLyricsHandlers } from "./island/lyrics";
+import { registerFocusHandlers } from "./island/focus";
 import { registerWhatsAppHandlers } from "./island/whatsapp";
 import { NOWPLAYING_ID, NowPlaying, SPOTIFY_ID } from "./core/spotify";
 import { Recap } from "./recap/recap";
@@ -163,6 +164,7 @@ async function main() {
   registerVoiceHandlers();
   registerSpotifyHandlers(island);
   registerLyricsHandlers();
+  registerFocusHandlers(island);
   registerWhatsAppHandlers(island);
   // New versions: Rust offers the card, the island opens it when nothing else waits.
   await Updates.register(island);
